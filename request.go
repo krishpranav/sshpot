@@ -40,6 +40,11 @@ func (request tcpipRequest) logEntry() logEntry {
 	}
 }
 
+type cancelTCPIPRequest struct {
+	Address string
+	Port    uint32
+}
+
 func (request cancelTCPIPRequest) reply() []byte {
 	return nil
 }
@@ -108,4 +113,12 @@ func handleGlobalRequest(request *ssh.Request, context *connContext) error {
 	}
 	context.logEvent(payload.logEntry())
 	return nil
+}
+
+func createHostkeysRequestPayload(keys []ssh.Signer) []byte {
+	result := make([]byte, 0)
+	for _, key := range keys {
+		result = append(result, ssh.Marshal(struct{ key string }{string(key.PublicKey().Marshal())})...)
+	}
+	return result
 }
