@@ -51,3 +51,33 @@ func (request cancelTCPIPRequest) logEntry() logEntry {
 
 type noMoreSessionsRequest struct {
 }
+
+func (request noMoreSessionsRequest) reply() []byte {
+	return nil
+}
+func (request noMoreSessionsRequest) logEntry() logEntry {
+	return noMoreSessionsLog{}
+}
+
+var globalRequestPayloads = map[string]globalRequestPayloadParser{
+	"tcpip-forward": func(data []byte) (globalRequestPayload, error) {
+		payload := &tcpipRequest{}
+		if err := ssh.Unmarshal(data, payload); err != nil {
+			return nil, err
+		}
+		return payload, nil
+	},
+	"cancel-tcpip-forward": func(data []byte) (globalRequestPayload, error) {
+		payload := &cancelTCPIPRequest{}
+		if err := ssh.Unmarshal(data, payload); err != nil {
+			return nil, err
+		}
+		return payload, nil
+	},
+	"no-more-sessions@openssh.com": func(data []byte) (globalRequestPayload, error) {
+		if len(data) != 0 {
+			return nil, errors.New("invalid request payload")
+		}
+		return &noMoreSessionsRequest{}, nil
+	},
+}
