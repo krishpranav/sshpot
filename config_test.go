@@ -160,3 +160,75 @@ func TestDefaultConfig(t *testing.T) {
 	verifyConfig(t, cfg, expectedConfig)
 	verifyDefaultKeys(t, dataDir)
 }
+
+func TestUserConfigDefaultKeys(t *testing.T) {
+	logFile := path.Join(t.TempDir(), "test.log")
+	cfgString := fmt.Sprintf(`
+server:
+  listen_address: 0.0.0.0:22
+logging:
+  file: %v
+  json: true
+  timestamps: false
+auth:
+  max_tries: 234
+  no_auth: true
+  password_auth:
+    enabled: false
+    accepted: false
+  public_key_auth:
+    enabled: false
+    accepted: true
+  keyboard_interactive_auth:
+    enabled: true
+    accepted: true
+    instruction: instruction
+    questions:
+    - text: q1
+      echo: true
+    - text: q2
+      echo: false
+ssh_proto:
+  version: SSH-2.0-test
+  banner:
+  rekey_threshold: 123
+  key_exchanges: [kex]
+  ciphers: [cipher]
+  macs: [mac]
+`, logFile)
+	dataDir := t.TempDir()
+	cfg, err := getConfig(cfgString, dataDir)
+	if err != nil {
+		t.Fatalf("Failed to get config: %v", err)
+	}
+	if cfg.logFileHandle != nil {
+		cfg.logFileHandle.Close()
+	}
+	expectedConfig := &config{}
+	expectedConfig.Server.ListenAddress = "0.0.0.0:22"
+	expectedConfig.Server.HostKeys = []string{
+		path.Join(dataDir, "host_rsa_key"),
+		path.Join(dataDir, "host_ecdsa_key"),
+		path.Join(dataDir, "host_ed25519_key"),
+	}
+	expectedConfig.Logging.File = logFile
+	expectedConfig.Logging.JSON = true
+	expectedConfig.Logging.Timestamps = false
+	expectedConfig.Auth.MaxTries = 234
+	expectedConfig.Auth.NoAuth = true
+	expectedConfig.Auth.PublicKeyAuth.Accepted = true
+	expectedConfig.Auth.KeyboardInteractiveAuth.Enabled = true
+	expectedConfig.Auth.KeyboardInteractiveAuth.Accepted = true
+	expectedConfig.Auth.KeyboardInteractiveAuth.Instruction = "instruction"
+	expectedConfig.Auth.KeyboardInteractiveAuth.Questions = []keyboardInteractiveAuthQuestion{
+		{"q1", true},
+		{"q2", false},
+	}
+	expectedConfig.SSHProto.Version = "SSH-2.0-test"
+	expectedConfig.SSHProto.RekeyThreshold = 123
+	expectedConfig.SSHProto.KeyExchanges = []string{"kex"}
+	expectedConfig.SSHProto.Ciphers = []string{"cipher"}
+	expectedConfig.SSHProto.MACs = []string{"mac"}
+	verifyConfig(t, cfg, expectedConfig)
+	verifyDefaultKeys(t, dataDir)
+}
