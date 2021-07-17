@@ -39,3 +39,15 @@ func (request tcpipRequest) logEntry() logEntry {
 		Address: net.JoinHostPort(request.Address, strconv.Itoa(int(request.Port))),
 	}
 }
+
+func (request cancelTCPIPRequest) reply() []byte {
+	return nil
+}
+func (request cancelTCPIPRequest) logEntry() logEntry {
+	return cancelTCPIPForwardLog{
+		Address: net.JoinHostPort(request.Address, strconv.Itoa(int(request.Port))),
+	}
+}
+
+type noMoreSessionsRequest struct {
+}
