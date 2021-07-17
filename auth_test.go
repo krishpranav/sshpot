@@ -14,7 +14,7 @@ func (context mockConnContext) User() string {
 }
 
 func (context mockConnContext) SessionID() []byte {
-	return []byte("session-1")
+	return []byte("somesession")
 }
 
 func (context mockConnContext) ClientVersion() []byte {
@@ -23,4 +23,12 @@ func (context mockConnContext) ClientVersion() []byte {
 
 func (context mockConnContext) ServerVersion() []byte {
 	return []byte("SSH-2.0-testserver")
+}
+
+func (context mockConnContext) RemoteAddr() net.Addr {
+	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 1234}
+}
+
+func (context mockConnContext) LocalAddr() net.Addr {
+	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 2022}
 }
