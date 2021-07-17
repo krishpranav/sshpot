@@ -152,3 +152,99 @@ func loadKey(keyFile string) (ssh.Signer, error) {
 	}
 	return ssh.ParsePrivateKey(keyBytes)
 }
+
+func (cfg *config) setDefaultHostKeys(dataDir string, signatures []keySignature) error {
+	for _, signature := range signatures {
+		keyFile, err := generateKey(dataDir, signature)
+		if err != nil {
+			return err
+		}
+		cfg.Server.HostKeys = append(cfg.Server.HostKeys, keyFile)
+	}
+	return nil
+}
+
+func (cfg *config) parseHostKeys() error {
+	for _, keyFile := range cfg.Server.HostKeys {
+		signer, err := loadKey(keyFile)
+		if err != nil {
+			return err
+		}
+		cfg.parsedHostKeys = append(cfg.parsedHostKeys, signer)
+	}
+	return nil
+}
+
+func (cfg *config) setupSSHConfig() error {
+	sshConfig := &ssh.ServerConfig{
+		Config: ssh.Config{
+			RekeyThreshold: cfg.SSHProto.RekeyThreshold,
+			KeyExchanges:   cfg.SSHProto.KeyExchanges,
+			Ciphers:        cfg.SSHProto.Ciphers,
+			MACs:           cfg.SSHProto.MACs,
+		},
+		NoClientAuth:                cfg.Auth.NoAuth,
+		MaxAuthTries:                cfg.Auth.MaxTries,
+		PasswordCallback:            cfg.getPasswordCallback(),
+		PublicKeyCallback:           cfg.getPublicKeyCallback(),
+		KeyboardInteractiveCallback: cfg.getKeyboardInteractiveCallback(),
+		AuthLogCallback:             cfg.getAuthLogCallback(),
+		ServerVersion:               cfg.SSHProto.Version,
+		BannerCallback:              cfg.getBannerCallback(),
+	}
+	if err := cfg.parseHostKeys(); err != nil {
+		return err
+	}
+	for _, key := range cfg.parsedHostKeys {
+		sshConfig.AddHostKey(key)
+	}
+	cfg.sshConfig = sshConfig
+	return nil
+}
+
+func (cfg *config) setupLogging() error {
+	if cfg.logFileHandle != nil {
+		cfg.logFileHandle.Close()
+	}
+	if cfg.Logging.File != "" {
+		logFile, err := os.OpenFile(cfg.Logging.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		log.SetOutput(logFile)
+		cfg.logFileHandle = logFile
+	} else {
+		log.SetOutput(os.Stdout)
+		cfg.logFileHandle = nil
+	}
+	if !cfg.Logging.JSON && cfg.Logging.Timestamps {
+		log.SetFlags(log.LstdFlags)
+	} else {
+		log.SetFlags(0)
+	}
+	return nil
+}
+
+func getConfig(configString string, dataDir string) (*config, error) {
+	cfg := getDefaultConfig()
+
+	if err := yaml.UnmarshalStrict([]byte(configString), cfg); err != nil {
+		return nil, err
+	}
+
+	if len(cfg.Server.HostKeys) == 0 {
+		infoLogger.Printf("No host keys configured, using keys at %q", dataDir)
+		if err := cfg.setDefaultHostKeys(dataDir, []keySignature{rsa_key, ecdsa_key, ed25519_key}); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := cfg.setupSSHConfig(); err != nil {
+		return nil, err
+	}
+	if err := cfg.setupLogging(); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
