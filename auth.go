@@ -56,3 +56,33 @@ func (cfg *config) getPublicKeyCallback() func(conn ssh.ConnMetadata, key ssh.Pu
 		return nil, nil
 	}
 }
+
+func (cfg *config) getKeyboardInteractiveCallback() func(conn ssh.ConnMetadata, client ssh.KeyboardInteractiveChallenge) (*ssh.Permissions, error) {
+	if !cfg.Auth.KeyboardInteractiveAuth.Enabled {
+		return nil
+	}
+	var keyboardInteractiveQuestions []string
+	var keyboardInteractiveEchos []bool
+	for _, question := range cfg.Auth.KeyboardInteractiveAuth.Questions {
+		keyboardInteractiveQuestions = append(keyboardInteractiveQuestions, question.Text)
+		keyboardInteractiveEchos = append(keyboardInteractiveEchos, question.Echo)
+	}
+	return func(conn ssh.ConnMetadata, client ssh.KeyboardInteractiveChallenge) (*ssh.Permissions, error) {
+		answers, err := client(conn.User(), cfg.Auth.KeyboardInteractiveAuth.Instruction, keyboardInteractiveQuestions, keyboardInteractiveEchos)
+		if err != nil {
+			warningLogger.Printf("Failed to process keyboard interactive authentication: %v", err)
+			return nil, errors.New("")
+		}
+		connContext{ConnMetadata: conn, cfg: cfg}.logEvent(keyboardInteractiveAuthLog{
+			authLog: authLog{
+				User:     conn.User(),
+				Accepted: authAccepted(cfg.Auth.KeyboardInteractiveAuth.Accepted),
+			},
+			Answers: answers,
+		})
+		if !cfg.Auth.KeyboardInteractiveAuth.Accepted {
+			return nil, errors.New("")
+		}
+		return nil, nil
+	}
+}
