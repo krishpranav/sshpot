@@ -309,3 +309,122 @@ func testSession(t *testing.T, dataDir string, cfg *config, clientAddress string
 
 	return logBuffer.String()
 }
+
+func TestSession(t *testing.T) {
+	dataDir := t.TempDir()
+	key, err := generateKey(dataDir, ecdsa_key)
+	if err != nil {
+		t.Fatalf("Failed to generate key: %v", err)
+	}
+
+	cfg := &config{}
+	cfg.Server.HostKeys = []string{key}
+	cfg.Auth.NoAuth = true
+	if err := cfg.setupSSHConfig(); err != nil {
+		t.Fatalf("Failed to setup SSH config: %v", err)
+	}
+
+	clientAddress := path.Join(dataDir, "client.sock")
+
+	logs := testSession(t, dataDir, cfg, clientAddress)
+
+	expectedLogs := fmt.Sprintf(`[%[1]v] authentication for user "" without credentials accepted
+[%[1]v] connection with client version "SSH-2.0-Go" established
+[%[1]v] [channel 0] session requested
+[%[1]v] [channel 0] X11 forwarding on screen 0 requested
+[%[1]v] [channel 0] environment variable "LANG" with value "en_IE.UTF-8" requested
+[%[1]v] [channel 0] command "sh" requested
+[%[1]v] [channel 0] input: "false"
+[%[1]v] [channel 0] input: "true"
+[%[1]v] [channel 0] closed
+[%[1]v] [channel 1] session requested
+[%[1]v] [channel 1] X11 forwarding on screen 0 requested
+[%[1]v] [channel 1] environment variable "LANG" with value "en_IE.UTF-8" requested
+[%[1]v] [channel 1] shell requested
+[%[1]v] [channel 1] input: "false"
+[%[1]v] [channel 1] input: "true"
+[%[1]v] [channel 1] closed
+[%[1]v] [channel 2] session requested
+[%[1]v] [channel 2] X11 forwarding on screen 0 requested
+[%[1]v] [channel 2] PTY using terminal "xterm-256color" (size 80x24) requested
+[%[1]v] [channel 2] environment variable "LANG" with value "en_IE.UTF-8" requested
+[%[1]v] [channel 2] command "sh" requested
+[%[1]v] [channel 2] input: "false"
+[%[1]v] [channel 2] input: "true"
+[%[1]v] [channel 2] closed
+[%[1]v] [channel 3] session requested
+[%[1]v] [channel 3] X11 forwarding on screen 0 requested
+[%[1]v] [channel 3] PTY using terminal "xterm-256color" (size 80x24) requested
+[%[1]v] [channel 3] environment variable "LANG" with value "en_IE.UTF-8" requested
+[%[1]v] [channel 3] shell requested
+[%[1]v] [channel 3] input: "false"
+[%[1]v] [channel 3] input: "true"
+[%[1]v] [channel 3] closed
+[%[1]v] connection closed
+`, clientAddress)
+	if logs != expectedLogs {
+		t.Errorf("logs=%v, want %v", logs, expectedLogs)
+	}
+}
+
+func TestSessionJSON(t *testing.T) {
+	dataDir := t.TempDir()
+	key, err := generateKey(dataDir, ecdsa_key)
+	if err != nil {
+		t.Fatalf("Failed to generate key: %v", err)
+	}
+
+	cfg := &config{}
+	cfg.Server.HostKeys = []string{key}
+	cfg.Logging.JSON = true
+	cfg.Auth.NoAuth = true
+	if err := cfg.setupSSHConfig(); err != nil {
+		t.Fatalf("Failed to setup SSH config: %v", err)
+	}
+
+	clientAddress := path.Join(dataDir, "client.sock")
+
+	logs := testSession(t, dataDir, cfg, clientAddress)
+
+	escapedClientAddress, err := json.Marshal(clientAddress)
+	if err != nil {
+		t.Fatalf("Failed to escape clientAddress: %v", err)
+	}
+	expectedLogs := fmt.Sprintf(`{"source":%[1]v,"event_type":"no_auth","event":{"user":"","accepted":true}}
+{"source":%[1]v,"event_type":"connection","event":{"client_version":"SSH-2.0-Go"}}
+{"source":%[1]v,"event_type":"session","event":{"channel_id":0}}
+{"source":%[1]v,"event_type":"x11","event":{"channel_id":0,"screen":0}}
+{"source":%[1]v,"event_type":"env","event":{"channel_id":0,"name":"LANG","value":"en_IE.UTF-8"}}
+{"source":%[1]v,"event_type":"exec","event":{"channel_id":0,"command":"sh"}}
+{"source":%[1]v,"event_type":"session_input","event":{"channel_id":0,"input":"false"}}
+{"source":%[1]v,"event_type":"session_input","event":{"channel_id":0,"input":"true"}}
+{"source":%[1]v,"event_type":"session_close","event":{"channel_id":0}}
+{"source":%[1]v,"event_type":"session","event":{"channel_id":1}}
+{"source":%[1]v,"event_type":"x11","event":{"channel_id":1,"screen":0}}
+{"source":%[1]v,"event_type":"env","event":{"channel_id":1,"name":"LANG","value":"en_IE.UTF-8"}}
+{"source":%[1]v,"event_type":"shell","event":{"channel_id":1}}
+{"source":%[1]v,"event_type":"session_input","event":{"channel_id":1,"input":"false"}}
+{"source":%[1]v,"event_type":"session_input","event":{"channel_id":1,"input":"true"}}
+{"source":%[1]v,"event_type":"session_close","event":{"channel_id":1}}
+{"source":%[1]v,"event_type":"session","event":{"channel_id":2}}
+{"source":%[1]v,"event_type":"x11","event":{"channel_id":2,"screen":0}}
+{"source":%[1]v,"event_type":"pty","event":{"channel_id":2,"terminal":"xterm-256color","width":80,"height":24}}
+{"source":%[1]v,"event_type":"env","event":{"channel_id":2,"name":"LANG","value":"en_IE.UTF-8"}}
+{"source":%[1]v,"event_type":"exec","event":{"channel_id":2,"command":"sh"}}
+{"source":%[1]v,"event_type":"session_input","event":{"channel_id":2,"input":"false"}}
+{"source":%[1]v,"event_type":"session_input","event":{"channel_id":2,"input":"true"}}
+{"source":%[1]v,"event_type":"session_close","event":{"channel_id":2}}
+{"source":%[1]v,"event_type":"session","event":{"channel_id":3}}
+{"source":%[1]v,"event_type":"x11","event":{"channel_id":3,"screen":0}}
+{"source":%[1]v,"event_type":"pty","event":{"channel_id":3,"terminal":"xterm-256color","width":80,"height":24}}
+{"source":%[1]v,"event_type":"env","event":{"channel_id":3,"name":"LANG","value":"en_IE.UTF-8"}}
+{"source":%[1]v,"event_type":"shell","event":{"channel_id":3}}
+{"source":%[1]v,"event_type":"session_input","event":{"channel_id":3,"input":"false"}}
+{"source":%[1]v,"event_type":"session_input","event":{"channel_id":3,"input":"true"}}
+{"source":%[1]v,"event_type":"session_close","event":{"channel_id":3}}
+{"source":%[1]v,"event_type":"connection_close","event":{}}
+`, string(escapedClientAddress))
+	if logs != expectedLogs {
+		t.Errorf("logs=%v, want %v", logs, expectedLogs)
+	}
+}
