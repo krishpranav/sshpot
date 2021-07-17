@@ -13,3 +13,19 @@ import (
 )
 
 type source int
+
+const (
+	client source = iota
+	server
+)
+
+func (src source) String() string {
+	switch src {
+	case client:
+		return "client"
+	case server:
+		return "server"
+	default:
+		return "unknown"
+	}
+}
