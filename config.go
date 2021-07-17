@@ -87,3 +87,24 @@ func getDefaultConfig() *config {
 	cfg.SSHProto.Banner = "This is an SSH honeypot. Everything is logged and monitored."
 	return cfg
 }
+
+type keySignature int
+
+const (
+	rsa_key keySignature = iota
+	ecdsa_key
+	ed25519_key
+)
+
+func (signature keySignature) String() string {
+	switch signature {
+	case rsa_key:
+		return "rsa"
+	case ecdsa_key:
+		return "ecdsa"
+	case ed25519_key:
+		return "ed25519"
+	default:
+		return "unknown"
+	}
+}
