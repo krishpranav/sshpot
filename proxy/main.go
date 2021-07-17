@@ -135,3 +135,24 @@ func logEvent(entry logEntry, src source) {
 	}
 	log.Printf("%s", jsonBytes)
 }
+
+func streamHeader(reader io.Reader) <-chan string {
+	input := make(chan string)
+	go func() {
+		defer close(input)
+		buffer := make([]byte, 256)
+		for {
+			n, err := reader.Read(buffer)
+			if n > 0 {
+				input <- string(buffer[:n])
+			}
+			if err != nil {
+				if err != io.EOF {
+					panic(err)
+				}
+				return
+			}
+		}
+	}()
+	return input
+}
