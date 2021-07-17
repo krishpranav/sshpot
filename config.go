@@ -108,3 +108,39 @@ func (signature keySignature) String() string {
 		return "unknown"
 	}
 }
+
+func generateKey(dataDir string, signature keySignature) (string, error) {
+	keyFile := path.Join(dataDir, fmt.Sprintf("host_%v_key", signature))
+	if _, err := os.Stat(keyFile); err == nil {
+		return keyFile, nil
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+	infoLogger.Printf("Host key %q not found, generating it", keyFile)
+	if _, err := os.Stat(path.Dir(keyFile)); os.IsNotExist(err) {
+		if err := os.MkdirAll(path.Dir(keyFile), 0755); err != nil {
+			return "", err
+		}
+	}
+	var key interface{}
+	err := errors.New("unsupported key type")
+	switch signature {
+	case rsa_key:
+		key, err = rsa.GenerateKey(rand.Reader, 3072)
+	case ecdsa_key:
+		key, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	case ed25519_key:
+		_, key, err = ed25519.GenerateKey(rand.Reader)
+	}
+	if err != nil {
+		return "", err
+	}
+	keyBytes, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return "", err
+	}
+	if err := ioutil.WriteFile(keyFile, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes}), 0600); err != nil {
+		return "", err
+	}
+	return keyFile, nil
+}
