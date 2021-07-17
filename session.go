@@ -126,3 +126,54 @@ func (request windowChangeRequestPayload) logEntry(channelID int) logEntry {
 		Height: request.Height,
 	}
 }
+
+var sessionRequestParsers = map[string]channelRequestPayloadParser{
+	"pty-req": func(data []byte) (channelRequestPayload, error) {
+		payload := &ptyRequest{}
+		if err := ssh.Unmarshal(data, payload); err != nil {
+			return nil, err
+		}
+		return payload, nil
+	},
+	"shell": func(data []byte) (channelRequestPayload, error) {
+		if len(data) != 0 {
+			return nil, errors.New("invalid request payload")
+		}
+		return &shellRequest{}, nil
+	},
+	"x11-req": func(data []byte) (channelRequestPayload, error) {
+		payload := &x11RequestPayload{}
+		if err := ssh.Unmarshal(data, payload); err != nil {
+			return nil, err
+		}
+		return payload, nil
+	},
+	"env": func(data []byte) (channelRequestPayload, error) {
+		payload := &envRequestPayload{}
+		if err := ssh.Unmarshal(data, payload); err != nil {
+			return nil, err
+		}
+		return payload, nil
+	},
+	"exec": func(data []byte) (channelRequestPayload, error) {
+		payload := &execRequestPayload{}
+		if err := ssh.Unmarshal(data, payload); err != nil {
+			return nil, err
+		}
+		return payload, nil
+	},
+	"subsystem": func(data []byte) (channelRequestPayload, error) {
+		payload := &subsystemRequestPayload{}
+		if err := ssh.Unmarshal(data, payload); err != nil {
+			return nil, err
+		}
+		return payload, nil
+	},
+	"window-change": func(data []byte) (channelRequestPayload, error) {
+		payload := &windowChangeRequestPayload{}
+		if err := ssh.Unmarshal(data, payload); err != nil {
+			return nil, err
+		}
+		return payload, nil
+	},
+}
