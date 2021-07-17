@@ -34,3 +34,11 @@ type mockFile struct {
 func (file *mockFile) Write(p []byte) (n int, err error) {
 	return 0, errors.New("")
 }
+
+func (file *mocFile) Close() error {
+	if file.closed {
+		return errors.New("")
+	}
+	file.closed = true
+	return nil
+}
