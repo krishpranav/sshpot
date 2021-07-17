@@ -1,5 +1,6 @@
 package main
 
+// imports
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -136,7 +137,7 @@ func logEvent(entry logEntry, src source) {
 	log.Printf("%s", jsonBytes)
 }
 
-func streamHeader(reader io.Reader) <-chan string {
+func streamReader(reader io.Reader) <-chan string {
 	input := make(chan string)
 	go func() {
 		defer close(input)
@@ -297,5 +298,192 @@ func handleChannel(channelID int, clientChannel ssh.Channel, clientRequests <-ch
 				}
 			}
 		}
+	}
+}
+
+func handleConn(clientConn net.Conn, sshServerConfig *ssh.ServerConfig, serverAddress string, clientKey ssh.Signer) {
+	clientSSHConn, clientNewChannels, clientRequests, err := ssh.NewServerConn(clientConn, sshServerConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	serverConn, err := net.Dial("tcp", serverAddress)
+	if err != nil {
+		panic(err)
+	}
+
+	serverSSHConn, serverNewChannels, serverRequests, err := ssh.NewClientConn(serverConn, serverAddress, &ssh.ClientConfig{
+		User:            clientSSHConn.User(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(clientKey),
+		},
+		ClientVersion: "SSH-2.0-OpenSSH_7.2",
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	channelID := 0
+
+	for clientNewChannels != nil || clientRequests != nil || serverNewChannels != nil || serverRequests != nil {
+		select {
+		case clientNewChannel, ok := <-clientNewChannels:
+			if !ok {
+				clientNewChannels = nil
+				if serverNewChannels != nil {
+					logEvent(connectionCloseLog{}, client)
+					if err := serverSSHConn.Close(); err != nil {
+						panic(err)
+					}
+				}
+				continue
+			}
+			serverChannel, serverChannelRequests, err := serverSSHConn.OpenChannel(clientNewChannel.ChannelType(), clientNewChannel.ExtraData())
+			logEvent(newChannelLog{
+				Type:      clientNewChannel.ChannelType(),
+				ExtraData: base64.RawStdEncoding.EncodeToString(clientNewChannel.ExtraData()),
+				Accepted:  err == nil,
+			}, client)
+			if err != nil {
+				if err, ok := err.(*ssh.OpenChannelError); ok {
+					if err := clientNewChannel.Reject(err.Reason, err.Message); err != nil {
+						panic(err)
+					}
+					continue
+				}
+				panic(err)
+			}
+			clientChannel, clientChannelRequests, err := clientNewChannel.Accept()
+			if err != nil {
+				panic(err)
+			}
+			go handleChannel(channelID, clientChannel, clientChannelRequests, serverChannel, serverChannelRequests)
+		case clientRequest, ok := <-clientRequests:
+			if !ok {
+				clientRequests = nil
+				continue
+			}
+			if clientRequest.Type == "no-more-sessions@openssh.com" {
+				logEvent(globalRequestLog{
+					requestLog: requestLog{
+						Type:      clientRequest.Type,
+						WantReply: clientRequest.WantReply,
+						Payload:   base64.RawStdEncoding.EncodeToString(clientRequest.Payload),
+						Accepted:  clientRequest.WantReply,
+					},
+					Response: base64.RawStdEncoding.EncodeToString([]byte{}),
+				}, client)
+				continue
+			}
+			accepted, response, err := serverSSHConn.SendRequest(clientRequest.Type, clientRequest.WantReply, clientRequest.Payload)
+			if err != nil {
+				panic(err)
+			}
+			logEvent(globalRequestLog{
+				requestLog: requestLog{
+					Type:      clientRequest.Type,
+					WantReply: clientRequest.WantReply,
+					Payload:   base64.RawStdEncoding.EncodeToString(clientRequest.Payload),
+					Accepted:  accepted,
+				},
+				Response: base64.RawStdEncoding.EncodeToString(response),
+			}, client)
+			if err := clientRequest.Reply(accepted, response); err != nil {
+				panic(err)
+			}
+		case serverNewChannel, ok := <-serverNewChannels:
+			if !ok {
+				if clientNewChannels != nil {
+					logEvent(connectionCloseLog{}, server)
+					if err := clientSSHConn.Close(); err != nil {
+						panic(err)
+					}
+				}
+				serverNewChannels = nil
+				continue
+			}
+			panic(serverNewChannel.ChannelType())
+		case serverRequest, ok := <-serverRequests:
+			if !ok {
+				serverRequests = nil
+				continue
+			}
+			accepted, response, err := clientSSHConn.SendRequest(serverRequest.Type, serverRequest.WantReply, serverRequest.Payload)
+			logEvent(globalRequestLog{
+				requestLog: requestLog{
+					Type:      serverRequest.Type,
+					WantReply: serverRequest.WantReply,
+					Payload:   base64.RawStdEncoding.EncodeToString(serverRequest.Payload),
+					Accepted:  accepted,
+				},
+				Response: base64.RawStdEncoding.EncodeToString(response),
+			}, server)
+			if err != nil {
+				panic(err)
+			}
+			if err := serverRequest.Reply(accepted, response); err != nil {
+				panic(err)
+			}
+		}
+		channelID++
+	}
+}
+
+func main() {
+	listenAddress := flag.String("listen_address", "127.0.0.1:2022", "listen address")
+	hostKeyFile := flag.String("host_key_file", "", "host key file")
+	serverAddress := flag.String("server_address", "127.0.0.1:22", "server address")
+	clientKeyFile := flag.String("client_key_file", "", "client key file")
+	flag.Parse()
+	if *listenAddress == "" {
+		panic("listen address is required")
+	}
+	if *hostKeyFile == "" {
+		panic("host key file is required")
+	}
+	if *serverAddress == "" {
+		panic("server address is required")
+	}
+	if *clientKeyFile == "" {
+		panic("client key file is required")
+	}
+
+	log.SetFlags(0)
+
+	serverConfig := &ssh.ServerConfig{
+		NoClientAuth:  true,
+		ServerVersion: "SSH-2.0-OpenSSH_7.2",
+	}
+	hostKeyBytes, err := ioutil.ReadFile(*hostKeyFile)
+	if err != nil {
+		panic(err)
+	}
+	hostKey, err := ssh.ParsePrivateKey(hostKeyBytes)
+	if err != nil {
+		panic(err)
+	}
+	serverConfig.AddHostKey(hostKey)
+
+	clientKeyBytes, err := ioutil.ReadFile(*clientKeyFile)
+	if err != nil {
+		panic(err)
+	}
+	clientKey, err := ssh.ParsePrivateKey(clientKeyBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	listener, err := net.Listen("tcp", *listenAddress)
+	if err != nil {
+		panic(err)
+	}
+	defer listener.Close()
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			panic(err)
+		}
+		go handleConn(conn, serverConfig, *serverAddress, clientKey)
 	}
 }
