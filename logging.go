@@ -273,3 +273,35 @@ func (entry x11Log) String() string {
 func (entry x11Log) eventType() string {
 	return "x11"
 }
+
+type envLog struct {
+	channelLog
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+func (entry envLog) String() string {
+	return fmt.Sprintf("[channel %v] environment variable %q with value %q requested", entry.ChannelID, entry.Name, entry.Value)
+}
+func (entry envLog) eventType() string {
+	return "env"
+}
+
+type windowChangeLog struct {
+	channelLog
+	Width  uint32 `json:"width"`
+	Height uint32 `json:"height"`
+}
+
+func (entry windowChangeLog) String() string {
+	return fmt.Sprintf("[channel %v] window size change to %vx%v requested", entry.ChannelID, entry.Width, entry.Height)
+}
+func (entry windowChangeLog) eventType() string {
+	return "window_change"
+}
+
+type debugGlobalRequestLog struct {
+	RequestType string `json:"request_type"`
+	WantReply   bool   `json:"want_reply"`
+	Payload     string `json:"payload"`
+}
