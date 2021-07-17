@@ -168,3 +168,39 @@ type sessionInputLog struct {
 	channelLog
 	Input string `json:"input"`
 }
+
+func (entry sessionInputLog) String() string {
+	return fmt.Sprintf("[channel %v] input: %q", entry.ChannelID, entry.Input)
+}
+func (entry sessionInputLog) eventType() string {
+	return "session_input"
+}
+
+type directTCPIPLog struct {
+	channelLog
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+func (entry directTCPIPLog) String() string {
+	return fmt.Sprintf("[channel %v] direct TCP/IP forwarding from %v to %v requested", entry.ChannelID, entry.From, entry.To)
+}
+func (entry directTCPIPLog) eventType() string {
+	return "direct_tcpip"
+}
+
+type directTCPIPCloseLog struct {
+	channelLog
+}
+
+func (entry directTCPIPCloseLog) String() string {
+	return fmt.Sprintf("[channel %v] closed", entry.ChannelID)
+}
+func (entry directTCPIPCloseLog) eventType() string {
+	return "direct_tcpip_close"
+}
+
+type directTCPIPInputLog struct {
+	channelLog
+	Input string `json:"input"`
+}
