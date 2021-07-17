@@ -54,3 +54,15 @@ type publicKeyAuthLog struct {
 	authLog
 	PublicKeyFingerprint string `json:"public_key"`
 }
+
+func (entry publicKeyAuthLog) String() string {
+	return fmt.Sprintf("authentication for user %q with public key %q %v", entry.User, entry.PublicKeyFingerprint, entry.Accepted)
+}
+func (entry publicKeyAuthLog) eventType() string {
+	return "public_key_auth"
+}
+
+type keyboardInteractiveAuthLog struct {
+	authLog
+	Answers []string `json:"answers"`
+}
