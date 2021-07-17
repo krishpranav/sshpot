@@ -222,3 +222,54 @@ type ptyLog struct {
 func (entry ptyLog) String() string {
 	return fmt.Sprintf("[channel %v] PTY using terminal %q (size %vx%v) requested", entry.ChannelID, entry.Terminal, entry.Width, entry.Height)
 }
+
+func (entry ptyLog) eventType() string {
+	return "pty"
+}
+
+type shellLog struct {
+	channelLog
+}
+
+func (entry shellLog) String() string {
+	return fmt.Sprintf("[channel %v] shell requested", entry.ChannelID)
+}
+func (entry shellLog) eventType() string {
+	return "shell"
+}
+
+type execLog struct {
+	channelLog
+	Command string `json:"command"`
+}
+
+func (entry execLog) String() string {
+	return fmt.Sprintf("[channel %v] command %q requested", entry.ChannelID, entry.Command)
+}
+func (entry execLog) eventType() string {
+	return "exec"
+}
+
+type subsystemLog struct {
+	channelLog
+	Subsystem string `json:"subsystem"`
+}
+
+func (entry subsystemLog) String() string {
+	return fmt.Sprintf("[channel %v] subsystem %q requested", entry.ChannelID, entry.Subsystem)
+}
+func (entry subsystemLog) eventType() string {
+	return "subsystem"
+}
+
+type x11Log struct {
+	channelLog
+	Screen uint32 `json:"screen"`
+}
+
+func (entry x11Log) String() string {
+	return fmt.Sprintf("[channel %v] X11 forwarding on screen %v requested", entry.ChannelID, entry.Screen)
+}
+func (entry x11Log) eventType() string {
+	return "x11"
+}
