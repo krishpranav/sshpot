@@ -37,3 +37,22 @@ func (cfg *config) getPasswordCallback() func(conn ssh.ConnMetadata, password []
 		return nil, nil
 	}
 }
+
+func (cfg *config) getPublicKeyCallback() func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
+	if !cfg.Auth.PublicKeyAuth.Enabled {
+		return nil
+	}
+	return func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
+		connContext{ConnMetadata: conn, cfg: cfg}.logEvent(publicKeyAuthLog{
+			authLog: authLog{
+				User:     conn.User(),
+				Accepted: authAccepted(cfg.Auth.PublicKeyAuth.Accepted),
+			},
+			PublicKeyFingerprint: ssh.FingerprintSHA256(key),
+		})
+		if !cfg.Auth.PublicKeyAuth.Accepted {
+			return nil, errors.New("")
+		}
+		return nil, nil
+	}
+}
