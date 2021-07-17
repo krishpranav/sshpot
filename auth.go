@@ -86,3 +86,14 @@ func (cfg *config) getKeyboardInteractiveCallback() func(conn ssh.ConnMetadata, 
 		return nil, nil
 	}
 }
+
+func (cfg *config) getBannerCallback() func(conn ssh.ConnMetadata) string {
+	if cfg.SSHProto.Banner == "" {
+		return nil
+	}
+	banner := strings.ReplaceAll(strings.ReplaceAll(cfg.SSHProto.Banner, "\r\n", "\n"), "\n", "\r\n")
+	if !strings.HasSuffix(banner, "\r\n") {
+		banner = fmt.Sprintf("%v\r\n", banner)
+	}
+	return func(conn ssh.ConnMetadata) string { return banner }
+}
