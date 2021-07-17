@@ -66,3 +66,31 @@ type keyboardInteractiveAuthLog struct {
 	authLog
 	Answers []string `json:"answers"`
 }
+
+func (entry keyboardInteractiveAuthLog) String() string {
+	return fmt.Sprintf("authentication for user %q with keyboard interactive answers %q %v", entry.User, entry.Answers, entry.Accepted)
+}
+func (entry keyboardInteractiveAuthLog) eventType() string {
+	return "keyboard_interactive_auth"
+}
+
+type connectionLog struct {
+	ClientVersion string `json:"client_version"`
+}
+
+func (entry connectionLog) String() string {
+	return fmt.Sprintf("connection with client version %q established", entry.ClientVersion)
+}
+func (entry connectionLog) eventType() string {
+	return "connection"
+}
+
+type connectionCloseLog struct {
+}
+
+func (entry connectionCloseLog) String() string {
+	return "connection closed"
+}
+func (entry connectionCloseLog) eventType() string {
+	return "connection_close"
+}
