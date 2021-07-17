@@ -59,3 +59,26 @@ func TestNoAuthFail(t *testing.T) {
 		t.Errorf("logs=%v, want %v", string(logs), expectedLogs)
 	}
 }
+
+func TestNoAuthSuccess(t *testing.T) {
+	cfg := &config{}
+	cfg.Auth.NoAuth = false
+	callback := cfg.getAuthLogCallback()
+	logBuffer := setupLogBuffer(t, cfg)
+	callback(mockConnContext{}, "none", nil)
+	logs := logBuffer.String()
+	expectedLogs := `[127.0.0.1:1234] authentication for user "root" without credentials accepted
+`
+	if logs != expectedLogs {
+		t.Errorf("logs=%v, want %v", string(logs), expectedLogs)
+	}
+}
+
+func TestPasswordDisabled(t *testing.T) {
+	cfg := &config{}
+	cfg.Auth.PasswordAuth.Enabled = false
+	callback := cfg.getPasswordCallback()
+	if callback != nil {
+		t.Errorf("callback=%p, want nil", callback)
+	}
+}
