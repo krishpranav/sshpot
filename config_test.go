@@ -137,3 +137,26 @@ func verifyDefaultKeys(t *testing.T, dataDir string) {
 		t.Errorf("keys=%v, want %v", keys, expectedKeys)
 	}
 }
+
+func TestDefaultConfig(t *testing.T) {
+	dataDir := t.TempDir()
+	cfg, err := getConfig("", dataDir)
+	if err != nil {
+		t.Fatalf("Failed to get config: %v", err)
+	}
+	expectedConfig := &config{}
+	expectedConfig.Server.ListenAddress = "127.0.0.1:2022"
+	expectedConfig.Server.HostKeys = []string{
+		path.Join(dataDir, "host_rsa_key"),
+		path.Join(dataDir, "host_ecdsa_key"),
+		path.Join(dataDir, "host_ed25519_key"),
+	}
+	expectedConfig.Logging.Timestamps = true
+	expectedConfig.Auth.PasswordAuth.Enabled = true
+	expectedConfig.Auth.PasswordAuth.Accepted = true
+	expectedConfig.Auth.PublicKeyAuth.Enabled = true
+	expectedConfig.SSHProto.Version = "SSH-2.0-sshesame"
+	expectedConfig.SSHProto.Banner = "This is an SSH honeypot. Everything is logged and monitored."
+	verifyConfig(t, cfg, expectedConfig)
+	verifyDefaultKeys(t, dataDir)
+}
