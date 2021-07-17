@@ -265,3 +265,14 @@ server:
 		t.Errorf("files=%v, want []", files)
 	}
 }
+
+func TestSetupLoggingOldHandleClosed(t *testing.T) {
+	file := &mockFile{}
+	cfg := &config{logFileHandle: file}
+	if err := cfg.setupLogging(); err != nil {
+		t.Fatalf("Failed to setup logging: %v", err)
+	}
+	if !file.closed {
+		t.Errorf("file.closed=false, want true")
+	}
+}
