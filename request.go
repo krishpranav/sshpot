@@ -27,3 +27,15 @@ type tcpipRequest struct {
 	Address string
 	Port    uint32
 }
+
+func (request tcpipRequest) reply() []byte {
+	if request.Port != 0 {
+		return nil
+	}
+	return ssh.Marshal(struct{ port uint32 }{uint32(rand.Intn(65536-1024) + 1024)})
+}
+func (request tcpipRequest) logEntry() logEntry {
+	return tcpipForwardLog{
+		Address: net.JoinHostPort(request.Address, strconv.Itoa(int(request.Port))),
+	}
+}
