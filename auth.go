@@ -18,3 +18,22 @@ func (cfg *config) getAuthLogCallback() func(conn ssh.ConnMetadata, method strin
 		}
 	}
 }
+
+func (cfg *config) getPasswordCallback() func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
+	if !cfg.Auth.PasswordAuth.Enabled {
+		return nil
+	}
+	return func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
+		connContext{ConnMetadata: conn, cfg: cfg}.logEvent(passwordAuthLog{
+			authLog: authLog{
+				User:     conn.User(),
+				Accepted: authAccepted(cfg.Auth.PasswordAuth.Accepted),
+			},
+			Password: string(password),
+		})
+		if !cfg.Auth.PasswordAuth.Accepted {
+			return nil, errors.New("")
+		}
+		return nil, nil
+	}
+}
