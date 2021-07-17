@@ -144,3 +144,11 @@ func generateKey(dataDir string, signature keySignature) (string, error) {
 	}
 	return keyFile, nil
 }
+
+func loadKey(keyFile string) (ssh.Signer, error) {
+	keyBytes, err := ioutil.ReadFile(keyFile)
+	if err != nil {
+		return nil, err
+	}
+	return ssh.ParsePrivateKey(keyBytes)
+}
