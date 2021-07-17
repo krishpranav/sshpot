@@ -117,17 +117,6 @@ func (entry cancelTCPIPForwardLog) eventType() string {
 	return "cancel_tcpip_forward"
 }
 
-type cancelTCPIPForwardLog struct {
-	Address string `json:"address"`
-}
-
-func (entry cancelTCPIPForwardLog) String() string {
-	return fmt.Sprintf("TCP/IP forwarding on %v canceled", entry.Address)
-}
-func (entry cancelTCPIPForwardLog) eventType() string {
-	return "cancel_tcpip_forward"
-}
-
 type noMoreSessionsLog struct {
 }
 
@@ -222,7 +211,6 @@ type ptyLog struct {
 func (entry ptyLog) String() string {
 	return fmt.Sprintf("[channel %v] PTY using terminal %q (size %vx%v) requested", entry.ChannelID, entry.Terminal, entry.Width, entry.Height)
 }
-
 func (entry ptyLog) eventType() string {
 	return "pty"
 }
@@ -341,4 +329,47 @@ type debugChannelRequestLog struct {
 	RequestType string `json:"request_type"`
 	WantReply   bool   `json:"want_reply"`
 	Payload     string `json:"payload"`
+}
+
+func (entry debugChannelRequestLog) String() string {
+	jsonBytes, err := json.Marshal(entry)
+	if err != nil {
+		warningLogger.Printf("Failed to log event: %v", err)
+		return ""
+	}
+	return fmt.Sprintf("DEBUG channel request received: %v\n", string(jsonBytes))
+}
+func (entry debugChannelRequestLog) eventType() string {
+	return "debug_channel_request"
+}
+
+func (context connContext) logEvent(entry logEntry) {
+	if strings.HasPrefix(entry.eventType(), "debug_") && !context.cfg.Logging.Debug {
+		return
+	}
+	if context.cfg.Logging.JSON {
+		var jsonEntry interface{}
+		if context.cfg.Logging.Timestamps {
+			jsonEntry = struct {
+				Time      string   `json:"time"`
+				Source    string   `json:"source"`
+				EventType string   `json:"event_type"`
+				Event     logEntry `json:"event"`
+			}{time.Now().Format(time.RFC3339), context.RemoteAddr().String(), entry.eventType(), entry}
+		} else {
+			jsonEntry = struct {
+				Source    string   `json:"source"`
+				EventType string   `json:"event_type"`
+				Event     logEntry `json:"event"`
+			}{context.RemoteAddr().String(), entry.eventType(), entry}
+		}
+		logBytes, err := json.Marshal(jsonEntry)
+		if err != nil {
+			warningLogger.Printf("Failed to log event: %v", err)
+			return
+		}
+		log.Print(string(logBytes))
+	} else {
+		log.Printf("[%v] %v", context.RemoteAddr().String(), entry)
+	}
 }
