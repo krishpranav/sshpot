@@ -55,3 +55,35 @@ type authConfig struct {
 	PublicKeyAuth           commonAuthConfig              `yaml:"public_key_auth"`
 	KeyboardInteractiveAuth keyboardInteractiveAuthConfig `yaml:"keyboard_interactive_auth"`
 }
+
+type sshProtoConfig struct {
+	Version        string   `yaml:"version"`
+	Banner         string   `yaml:"banner"`
+	RekeyThreshold uint64   `yaml:"rekey_threshold"`
+	KeyExchanges   []string `yaml:"key_exchanges"`
+	Ciphers        []string `yaml:"ciphers"`
+	MACs           []string `yaml:"macs"`
+}
+
+type config struct {
+	Server   serverConfig   `yaml:"server"`
+	Logging  loggingConfig  `yaml:"logging"`
+	Auth     authConfig     `yaml:"auth"`
+	SSHProto sshProtoConfig `yaml:"ssh_proto"`
+
+	parsedHostKeys []ssh.Signer
+	sshConfig      *ssh.ServerConfig
+	logFileHandle  io.WriteCloser
+}
+
+func getDefaultConfig() *config {
+	cfg := &config{}
+	cfg.Server.ListenAddress = "127.0.0.1:2022"
+	cfg.Logging.Timestamps = true
+	cfg.Auth.PasswordAuth.Enabled = true
+	cfg.Auth.PasswordAuth.Accepted = true
+	cfg.Auth.PublicKeyAuth.Enabled = true
+	cfg.SSHProto.Version = "SSH-2.0-sshesame"
+	cfg.SSHProto.Banner = "This is an SSH honeypot. Everything is logged and monitored."
+	return cfg
+}
