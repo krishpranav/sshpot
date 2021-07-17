@@ -35,7 +35,7 @@ func (file *mockFile) Write(p []byte) (n int, err error) {
 	return 0, errors.New("")
 }
 
-func (file *mocFile) Close() error {
+func (file *mockFile) Close() error {
 	if file.closed {
 		return errors.New("")
 	}
@@ -270,9 +270,32 @@ func TestSetupLoggingOldHandleClosed(t *testing.T) {
 	file := &mockFile{}
 	cfg := &config{logFileHandle: file}
 	if err := cfg.setupLogging(); err != nil {
-		t.Fatalf("Failed to setup logging: %v", err)
+		t.Fatalf("Failed to set up logging: %v", err)
 	}
 	if !file.closed {
 		t.Errorf("file.closed=false, want true")
+	}
+}
+
+func TestExistingKey(t *testing.T) {
+	dataDir := path.Join(t.TempDir(), "keys")
+	oldKeyFile, err := generateKey(dataDir, ed25519_key)
+	if err != nil {
+		t.Fatalf("Failed to generate key: %v", err)
+	}
+	oldKey, err := ioutil.ReadFile(oldKeyFile)
+	if err != nil {
+		t.Fatalf("Failed to read key: %v", err)
+	}
+	newKeyFile, err := generateKey(dataDir, ed25519_key)
+	if err != nil {
+		t.Fatalf("Failed to generate key: %v", err)
+	}
+	newKey, err := ioutil.ReadFile(newKeyFile)
+	if err != nil {
+		t.Fatalf("Failed to read key: %v", err)
+	}
+	if !reflect.DeepEqual(oldKey, newKey) {
+		t.Errorf("oldKey!=newKey")
 	}
 }
