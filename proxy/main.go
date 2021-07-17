@@ -45,3 +45,24 @@ type requestLog struct {
 
 	Accepted bool `json:"accepted"`
 }
+
+type logEntry interface {
+	eventType() string
+}
+
+type globalRequestLog struct {
+	requestLog
+
+	Response string `json:"response"`
+}
+
+func (entry globalRequestLog) eventType() string {
+	return "global_request"
+}
+
+type newChannelLog struct {
+	Type      string `json:"type"`
+	ExtraData string `json:"extra_data"`
+
+	Accepted bool `json:"accepted"`
+}
