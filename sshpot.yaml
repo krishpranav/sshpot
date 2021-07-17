@@ -1,0 +1,33 @@
+server:
+  listen_address: 127.0.0.1:2020
+  host_keys: null 
+logging:
+  file: null 
+  json: false 
+  timestamps: true 
+  debug: false 
+auth:
+  no_auth: false 
+  max_tries: 0 
+  password_auth:
+    enabled: true 
+    accepted: true 
+  public_key_auth:
+    enabled: true 
+    accepted: false 
+  keyboard_interactive_auth:
+    enabled: false 
+    accepted: false 
+    instruction: Answer these weird questions to log in! 
+    questions:
+      - text: "What's your name? " 
+        echo: true 
+      - text: "What's your deepest secret? "
+        echo: false
+ssh_proto:
+  version: SSH-2.0-sshpot 
+  banner: A simple ssh honey pot, fake ssh server that lets anyone to connect and monitor their activty 
+  rekey_threshold: 0 
+  key_exchanges: null 
+  ciphers: null 
+  macs: null 
