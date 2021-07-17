@@ -232,3 +232,36 @@ ssh_proto:
 	verifyConfig(t, cfg, expectedConfig)
 	verifyDefaultKeys(t, dataDir)
 }
+
+func TestUserConfigCustomKeys(t *testing.T) {
+	keyFile, err := generateKey(t.TempDir(), ecdsa_key)
+	cfgString := fmt.Sprintf(`
+server:
+  host_keys: [%v]
+`, keyFile)
+	if err != nil {
+		t.Fatalf("Failed to generate key: %v", err)
+	}
+	dataDir := t.TempDir()
+	cfg, err := getConfig(cfgString, dataDir)
+	if err != nil {
+		t.Fatalf("Failed to get config: %v", err)
+	}
+	expectedConfig := &config{}
+	expectedConfig.Server.ListenAddress = "127.0.0.1:2022"
+	expectedConfig.Server.HostKeys = []string{keyFile}
+	expectedConfig.Logging.Timestamps = true
+	expectedConfig.Auth.PasswordAuth.Enabled = true
+	expectedConfig.Auth.PasswordAuth.Accepted = true
+	expectedConfig.Auth.PublicKeyAuth.Enabled = true
+	expectedConfig.SSHProto.Version = "SSH-2.0-sshesame"
+	expectedConfig.SSHProto.Banner = "This is an SSH honeypot. Everything is logged and monitored."
+	verifyConfig(t, cfg, expectedConfig)
+	files, err := ioutil.ReadDir(dataDir)
+	if err != nil {
+		t.Fatalf("Failed to read directory: %v", err)
+	}
+	if len(files) != 0 {
+		t.Errorf("files=%v, want []", files)
+	}
+}
