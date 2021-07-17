@@ -29,3 +29,19 @@ func (src source) String() string {
 		return "unknown"
 	}
 }
+
+func (src source) MarshalJSON() ([]byte, error) {
+	return json.Marshal(src.String())
+}
+
+type channelLog struct {
+	ChannelID int `json:"channel_id"`
+}
+
+type requestLog struct {
+	Type      string `json:"type"`
+	WantReply bool   `json:"want_reply"`
+	Payload   string `json:"payload"`
+
+	Accepted bool `json:"accepted"`
+}
