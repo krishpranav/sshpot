@@ -66,3 +66,56 @@ type newChannelLog struct {
 
 	Accepted bool `json:"accepted"`
 }
+
+func (entry newChannelLog) eventType() string {
+	return "new_channel"
+}
+
+type channelRequestLog struct {
+	channelLog
+	requestLog
+}
+
+func (entry channelRequestLog) eventType() string {
+	return "channel_request"
+}
+
+type channelDataLog struct {
+	channelLog
+	Data string `json:"data"`
+}
+
+func (entry channelDataLog) eventType() string {
+	return "channel_data"
+}
+
+type channelErrorLog struct {
+	channelLog
+	Data string `json:"data"`
+}
+
+func (entry channelErrorLog) eventType() string {
+	return "channel_error"
+}
+
+type channelEOFLog struct {
+	channelLog
+}
+
+func (entry channelEOFLog) eventType() string {
+	return "channel_eof"
+}
+
+type channelCloseLog struct {
+	channelLog
+}
+
+func (entry channelCloseLog) eventType() string {
+	return "channel_close"
+}
+
+type connectionCloseLog struct{}
+
+func (entry connectionCloseLog) eventType() string {
+	return "connection_close"
+}
