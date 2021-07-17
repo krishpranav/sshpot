@@ -110,3 +110,30 @@ func verifyConfig(t *testing.T, cfg *config, expected *config) {
 		}
 	}
 }
+
+func verifyDefaultKeys(t *testing.T, dataDir string) {
+	files, err := ioutil.ReadDir(dataDir)
+	if err != nil {
+		t.Fatalf("Faield to list directory: %v", err)
+	}
+	expectedKeys := map[string]string{
+		"host_rsa_key":     "ssh-rsa",
+		"host_ecdsa_key":   "ecdsa-sha2-nistp256",
+		"host_ed25519_key": "ssh-ed25519",
+	}
+	keys := map[string]string{}
+	for _, file := range files {
+		keyBytes, err := ioutil.ReadFile(path.Join(dataDir, file.Name()))
+		if err != nil {
+			t.Fatalf("Failed to read key: %v", err)
+		}
+		signer, err := ssh.ParsePrivateKey(keyBytes)
+		if err != nil {
+			t.Fatalf("Failed to parse private key: %v", err)
+		}
+		keys[file.Name()] = signer.PublicKey().Type()
+	}
+	if !reflect.DeepEqual(keys, expectedKeys) {
+		t.Errorf("keys=%v, want %v", keys, expectedKeys)
+	}
+}
