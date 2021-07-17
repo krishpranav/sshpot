@@ -204,3 +204,21 @@ type directTCPIPInputLog struct {
 	channelLog
 	Input string `json:"input"`
 }
+
+func (entry directTCPIPInputLog) String() string {
+	return fmt.Sprintf("[channel %v] input: %q", entry.ChannelID, entry.Input)
+}
+func (entry directTCPIPInputLog) eventType() string {
+	return "direct_tcpip_input"
+}
+
+type ptyLog struct {
+	channelLog
+	Terminal string `json:"terminal"`
+	Width    uint32 `json:"width"`
+	Height   uint32 `json:"height"`
+}
+
+func (entry ptyLog) String() string {
+	return fmt.Sprintf("[channel %v] PTY using terminal %q (size %vx%v) requested", entry.ChannelID, entry.Terminal, entry.Width, entry.Height)
+}
