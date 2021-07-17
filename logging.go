@@ -137,3 +137,34 @@ func (entry noMoreSessionsLog) String() string {
 func (entry noMoreSessionsLog) eventType() string {
 	return "no_more_sessions"
 }
+
+type channelLog struct {
+	ChannelID int `json:"channel_id"`
+}
+
+type sessionLog struct {
+	channelLog
+}
+
+func (entry sessionLog) String() string {
+	return fmt.Sprintf("[channel %v] session requested", entry.ChannelID)
+}
+func (entry sessionLog) eventType() string {
+	return "session"
+}
+
+type sessionCloseLog struct {
+	channelLog
+}
+
+func (entry sessionCloseLog) String() string {
+	return fmt.Sprintf("[channel %v] closed", entry.ChannelID)
+}
+func (entry sessionCloseLog) eventType() string {
+	return "session_close"
+}
+
+type sessionInputLog struct {
+	channelLog
+	Input string `json:"input"`
+}
