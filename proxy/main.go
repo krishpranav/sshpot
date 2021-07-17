@@ -119,3 +119,19 @@ type connectionCloseLog struct{}
 func (entry connectionCloseLog) eventType() string {
 	return "connection_close"
 }
+
+func logEvent(entry logEntry, src source) {
+	jsonBytes, err := json.Marshal(struct {
+		Source    string   `json:"source"`
+		EventType string   `json:"event_type"`
+		Event     logEntry `json:"event"`
+	}{
+		Source:    src.String(),
+		EventType: entry.eventType(),
+		Event:     entry,
+	})
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("%s", jsonBytes)
+}
