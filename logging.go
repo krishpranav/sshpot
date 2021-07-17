@@ -116,3 +116,24 @@ func (entry cancelTCPIPForwardLog) String() string {
 func (entry cancelTCPIPForwardLog) eventType() string {
 	return "cancel_tcpip_forward"
 }
+
+type cancelTCPIPForwardLog struct {
+	Address string `json:"address"`
+}
+
+func (entry cancelTCPIPForwardLog) String() string {
+	return fmt.Sprintf("TCP/IP forwarding on %v canceled", entry.Address)
+}
+func (entry cancelTCPIPForwardLog) eventType() string {
+	return "cancel_tcpip_forward"
+}
+
+type noMoreSessionsLog struct {
+}
+
+func (entry noMoreSessionsLog) String() string {
+	return "rejection of further session channels requested"
+}
+func (entry noMoreSessionsLog) eventType() string {
+	return "no_more_sessions"
+}
