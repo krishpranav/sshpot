@@ -305,3 +305,40 @@ type debugGlobalRequestLog struct {
 	WantReply   bool   `json:"want_reply"`
 	Payload     string `json:"payload"`
 }
+
+func (entry debugGlobalRequestLog) String() string {
+	jsonBytes, err := json.Marshal(entry)
+	if err != nil {
+		warningLogger.Printf("Failed to log event: %v", err)
+		return ""
+	}
+	return fmt.Sprintf("DEBUG global request received: %v\n", string(jsonBytes))
+}
+func (entry debugGlobalRequestLog) eventType() string {
+	return "debug_global_request"
+}
+
+type debugChannelLog struct {
+	channelLog
+	ChannelType string `json:"channel_type"`
+	ExtraData   string `json:"extra_data"`
+}
+
+func (entry debugChannelLog) String() string {
+	jsonBytes, err := json.Marshal(entry)
+	if err != nil {
+		warningLogger.Printf("Failed to log event: %v", err)
+		return ""
+	}
+	return fmt.Sprintf("DEBUG new channel requested: %v\n", string(jsonBytes))
+}
+func (entry debugChannelLog) eventType() string {
+	return "debug_channel"
+}
+
+type debugChannelRequestLog struct {
+	channelLog
+	RequestType string `json:"request_type"`
+	WantReply   bool   `json:"want_reply"`
+	Payload     string `json:"payload"`
+}
