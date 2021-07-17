@@ -94,3 +94,25 @@ func (entry connectionCloseLog) String() string {
 func (entry connectionCloseLog) eventType() string {
 	return "connection_close"
 }
+
+type tcpipForwardLog struct {
+	Address string `json:"address"`
+}
+
+func (entry tcpipForwardLog) String() string {
+	return fmt.Sprintf("TCP/IP forwarding on %v requested", entry.Address)
+}
+func (entry tcpipForwardLog) eventType() string {
+	return "tcpip_forward"
+}
+
+type cancelTCPIPForwardLog struct {
+	Address string `json:"address"`
+}
+
+func (entry cancelTCPIPForwardLog) String() string {
+	return fmt.Sprintf("TCP/IP forwarding on %v canceled", entry.Address)
+}
+func (entry cancelTCPIPForwardLog) eventType() string {
+	return "cancel_tcpip_forward"
+}
