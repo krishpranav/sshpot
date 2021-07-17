@@ -17,3 +17,8 @@ type channelContext struct {
 	connContext
 	channelID int
 }
+
+var channelHandlers = map[string]func(newChannel ssh.NewChannel, context channelContext) error{
+	"session":      handleSessionChannel,
+	"direct-tcpip": handleDirectTCPIPChannel,
+}
