@@ -156,3 +156,146 @@ func streamHeader(reader io.Reader) <-chan string {
 	}()
 	return input
 }
+
+func handleChannel(channelID int, clientChannel ssh.Channel, clientRequests <-chan *ssh.Request, serverChannel ssh.Channel, serverRequests <-chan *ssh.Request) {
+	clientInputStream := streamReader(clientChannel)
+	serverInputStream := streamReader(serverChannel)
+	serverErrorStream := streamReader(serverChannel.Stderr())
+
+	for clientInputStream != nil || clientRequests != nil || serverInputStream != nil || serverRequests != nil {
+		select {
+		case clientInput, ok := <-clientInputStream:
+			if !ok {
+				if serverInputStream != nil {
+					logEvent(channelEOFLog{
+						channelLog: channelLog{
+							ChannelID: channelID,
+						},
+					}, client)
+					if err := serverChannel.CloseWrite(); err != nil {
+						panic(err)
+					}
+				}
+				clientInputStream = nil
+				continue
+			}
+			logEvent(channelDataLog{
+				channelLog: channelLog{
+					ChannelID: channelID,
+				},
+				Data: clientInput,
+			}, client)
+			if _, err := serverChannel.Write([]byte(clientInput)); err != nil {
+				panic(err)
+			}
+		case clientRequest, ok := <-clientRequests:
+			if !ok {
+				if serverRequests != nil {
+					logEvent(channelCloseLog{
+						channelLog: channelLog{
+							ChannelID: channelID,
+						},
+					}, client)
+					if err := serverChannel.Close(); err != nil {
+						panic(err)
+					}
+				}
+				clientRequests = nil
+				continue
+			}
+			accepted, err := serverChannel.SendRequest(clientRequest.Type, clientRequest.WantReply, clientRequest.Payload)
+			if err != nil {
+				panic(err)
+			}
+			logEvent(channelRequestLog{
+				channelLog: channelLog{
+					ChannelID: channelID,
+				},
+				requestLog: requestLog{
+					Type:      clientRequest.Type,
+					WantReply: clientRequest.WantReply,
+					Payload:   base64.RawStdEncoding.EncodeToString(clientRequest.Payload),
+					Accepted:  accepted,
+				},
+			}, client)
+			if clientRequest.WantReply {
+				if err := clientRequest.Reply(accepted, nil); err != nil {
+					panic(err)
+				}
+			}
+		case serverInput, ok := <-serverInputStream:
+			if !ok {
+				if clientInputStream != nil {
+					logEvent(channelEOFLog{
+						channelLog: channelLog{
+							ChannelID: channelID,
+						},
+					}, server)
+					if err := clientChannel.CloseWrite(); err != nil {
+						panic(err)
+					}
+				}
+				serverInputStream = nil
+				continue
+			}
+			logEvent(channelDataLog{
+				channelLog: channelLog{
+					ChannelID: channelID,
+				},
+				Data: serverInput,
+			}, server)
+			if _, err := clientChannel.Write([]byte(serverInput)); err != nil {
+				panic(err)
+			}
+		case serverError, ok := <-serverErrorStream:
+			if !ok {
+				serverErrorStream = nil
+				continue
+			}
+			logEvent(channelErrorLog{
+				channelLog: channelLog{
+					ChannelID: channelID,
+				},
+				Data: serverError,
+			}, server)
+			if _, err := clientChannel.Stderr().Write([]byte(serverError)); err != nil {
+				panic(err)
+			}
+		case serverRequest, ok := <-serverRequests:
+			if !ok {
+				if clientRequests != nil {
+					logEvent(channelCloseLog{
+						channelLog: channelLog{
+							ChannelID: channelID,
+						},
+					}, server)
+					if err := clientChannel.Close(); err != nil {
+						panic(err)
+					}
+				}
+				serverRequests = nil
+				continue
+			}
+			accepted, err := clientChannel.SendRequest(serverRequest.Type, serverRequest.WantReply, serverRequest.Payload)
+			if err != nil {
+				panic(err)
+			}
+			logEvent(channelRequestLog{
+				channelLog: channelLog{
+					ChannelID: channelID,
+				},
+				requestLog: requestLog{
+					Type:      serverRequest.Type,
+					WantReply: serverRequest.WantReply,
+					Payload:   base64.RawStdEncoding.EncodeToString(serverRequest.Payload),
+					Accepted:  accepted,
+				},
+			}, server)
+			if serverRequest.WantReply {
+				if err := serverRequest.Reply(accepted, nil); err != nil {
+					panic(err)
+				}
+			}
+		}
+	}
+}
