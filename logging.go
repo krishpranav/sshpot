@@ -37,3 +37,20 @@ func (entry noAuthLog) String() string {
 func (entry noAuthLog) eventType() string {
 	return "no_auth"
 }
+
+type passwordAuthLog struct {
+	authLog
+	Password string `json:"password"`
+}
+
+func (entry passwordAuthLog) String() string {
+	return fmt.Sprintf("authentication for user %q with password %q %v", entry.User, entry.Password, entry.Accepted)
+}
+func (entry passwordAuthLog) eventType() string {
+	return "password_auth"
+}
+
+type publicKeyAuthLog struct {
+	authLog
+	PublicKeyFingerprint string `json:"public_key"`
+}
