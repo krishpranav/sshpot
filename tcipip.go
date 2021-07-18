@@ -12,7 +12,7 @@ import (
 )
 
 type tcpipServer interface {
-	server(channel ssh.Channel, input chan<- string) error
+	serve(channel ssh.Channel, input chan<- string) error
 }
 
 var servers = map[uint32]tcpipServer{
@@ -23,7 +23,7 @@ type tcpipChannelData struct {
 	Address           string
 	Port              uint32
 	OriginatorAddress string
-	OrignatorPort     uint32
+	OriginatorPort    uint32
 }
 
 func handleDirectTCPIPChannel(newChannel ssh.NewChannel, context channelContext) error {
@@ -106,6 +106,20 @@ func handleDirectTCPIPChannel(newChannel ssh.NewChannel, context channelContext)
 }
 
 type httpServer struct{}
+
+func (httpServer) serveRequest(channel ssh.Channel, input chan<- string) error {
+	request, err := http.ReadRequest(bufio.NewReader(channel))
+	if err != nil {
+		return err
+	}
+	requestBytes, err := httputil.DumpRequest(request, true)
+	if err != nil {
+		return err
+	}
+	input <- string(requestBytes)
+	_, err = channel.Write([]byte("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"))
+	return err
+}
 
 func (server httpServer) serve(channel ssh.Channel, input chan<- string) error {
 	var err error
