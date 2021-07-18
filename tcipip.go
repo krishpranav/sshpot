@@ -104,3 +104,19 @@ func handleDirectTCPIPChannel(newChannel ssh.NewChannel, context channelContext)
 
 	return nil
 }
+
+type httpServer struct{}
+
+func (server httpServer) serve(channel ssh.Channel, input chan<- string) error {
+	var err error
+	for err == nil {
+		err = server.serveRequest(channel, input)
+	}
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if err = channel.CloseWrite(); err != nil {
+		return err
+	}
+	return channel.Close()
+}
